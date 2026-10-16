@@ -1,0 +1,6 @@
+repo: HackCase/tasks
+issues:
+  - title: "Melhoria dos projetos"
+    body: "Teste de melhoria dos projetos e bla bla bla"
+
+    assignees: [OssMenatti]
