@@ -1,6 +1,7 @@
-repo: HackCase/tasks
+# Exemplo de entrada para create_issues.py (troque repo/assignees antes de rodar)
+repo: owner/repo
 issues:
-  - title: "Melhoria dos projetos"
-    body: "Teste de melhoria dos projetos e bla bla bla"
-
-    assignees: [OssMenatti]
+  - title: "Exemplo de issue"
+    body: "Descrição da issue."
+    labels: []
+    assignees: []
