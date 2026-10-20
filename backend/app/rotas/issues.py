@@ -64,13 +64,19 @@ def backlog_aging():
     sql = """
         SELECT faixa, COUNT(*) AS total FROM (
             SELECT CASE
+                WHEN now() - created_at < interval '7 days'  THEN 1
+                WHEN now() - created_at < interval '30 days' THEN 2
+                WHEN now() - created_at < interval '90 days' THEN 3
+                ELSE 4
+            END AS ordem,
+            CASE
                 WHEN now() - created_at < interval '7 days'  THEN '0-7 dias'
                 WHEN now() - created_at < interval '30 days' THEN '8-30 dias'
                 WHEN now() - created_at < interval '90 days' THEN '31-90 dias'
                 ELSE '90+ dias'
             END AS faixa
             FROM issues WHERE state = 'open'
-        ) t GROUP BY faixa
+        ) t GROUP BY ordem, faixa ORDER BY ordem
     """
     with pool.connection() as conn:
         return conn.execute(sql).fetchall()

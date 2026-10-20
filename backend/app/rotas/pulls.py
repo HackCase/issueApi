@@ -29,13 +29,21 @@ def size_distribution():
     sql = """
         SELECT faixa, COUNT(*) AS total FROM (
             SELECT CASE
+                WHEN additions + deletions <= 50   THEN 1
+                WHEN additions + deletions <= 250  THEN 2
+                WHEN additions + deletions <= 1000 THEN 3
+                ELSE 4
+            END AS ordem,
+            CASE
                 WHEN additions + deletions <= 50   THEN 'P (até 50)'
                 WHEN additions + deletions <= 250  THEN 'M (51-250)'
                 WHEN additions + deletions <= 1000 THEN 'G (251-1000)'
                 ELSE 'GG (1000+)'
             END AS faixa
-            FROM pull_requests WHERE merged_at IS NOT NULL
-        ) t GROUP BY faixa
+            FROM pull_requests
+            WHERE merged_at IS NOT NULL
+              AND additions IS NOT NULL AND deletions IS NOT NULL
+        ) t GROUP BY ordem, faixa ORDER BY ordem
     """
     with pool.connection() as conn:
         return conn.execute(sql).fetchall()
