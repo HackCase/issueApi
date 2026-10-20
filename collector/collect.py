@@ -137,7 +137,7 @@ def _coletar_prs(conn, repo_id: int, repo_name: str, params: dict, ultimo):
                 first_review_at, merged_at, closed_at, updated_at)
                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                ON CONFLICT (id) DO UPDATE SET
-                 state=EXCLUDED.state, draft=EXCLUDED.draft,
+                 title=EXCLUDED.title, state=EXCLUDED.state, draft=EXCLUDED.draft,
                  additions=EXCLUDED.additions, deletions=EXCLUDED.deletions,
                  changed_files=EXCLUDED.changed_files,
                  review_comments=EXCLUDED.review_comments,
