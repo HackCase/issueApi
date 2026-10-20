@@ -1,14 +1,24 @@
 import os
 from datetime import datetime, timezone
+from pathlib import Path
 
+import httpx
 import psycopg
 from dotenv import load_dotenv
 
-from github_client import paginar, get, BASE
-
 load_dotenv()
+
+from github_client import paginar, get, BASE  # noqa: E402
+
 ORG = os.environ["GITHUB_ORG"]
 DB_URL = os.environ["DATABASE_URL"]
+SCHEMA = Path(__file__).with_name("schema.sql")
+
+SEM_ACESSO = (404, 410)
+
+
+def parse_data(s: str) -> datetime:
+    return datetime.fromisoformat(s.replace("Z", "+00:00"))
 
 
 def get_last_sync(conn, key: str):
@@ -51,7 +61,15 @@ def coletar_issues(conn, repo_id: int, repo_name: str):
     if since:
         params["since"] = since
 
-    for i in paginar(f"{BASE}/repos/{ORG}/{repo_name}/issues", params):
+    try:
+        issues = list(paginar(f"{BASE}/repos/{ORG}/{repo_name}/issues", params))
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code in SEM_ACESSO:
+            print(f"  issues indisponiveis em {repo_name} ({e.response.status_code}), pulando")
+            return
+        raise
+
+    for i in issues:
 
         if "pull_request" in i:
             continue
@@ -85,9 +103,23 @@ def coletar_prs(conn, repo_id: int, repo_name: str):
 
     params = {"state": "all", "sort": "updated", "direction": "desc"}
 
+    try:
+        _coletar_prs(conn, repo_id, repo_name, params, ultimo)
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code in SEM_ACESSO:
+            print(f"  PRs indisponiveis em {repo_name} ({e.response.status_code}), pulando")
+            return
+        raise
+
+    set_last_sync(conn, key, inicio)
+
+
+def _coletar_prs(conn, repo_id: int, repo_name: str, params: dict, ultimo):
+    corte = parse_data(ultimo) if ultimo else None
+
     for pr in paginar(f"{BASE}/repos/{ORG}/{repo_name}/pulls", params):
 
-        if ultimo and pr["updated_at"] < ultimo:
+        if corte and parse_data(pr["updated_at"]) < corte:
             break
 
         det = get(pr["url"])
@@ -121,15 +153,12 @@ def coletar_prs(conn, repo_id: int, repo_name: str):
             ),
         )
 
-    set_last_sync(conn, key, inicio)
-
 
 def main():
 
     with psycopg.connect(DB_URL, autocommit=False) as conn:
 
-        with open("schema.sql") as f:
-            conn.execute(f.read())
+        conn.execute(SCHEMA.read_text())
         conn.commit()
 
         for repo_id, repo_name in coletar_repos(conn):
