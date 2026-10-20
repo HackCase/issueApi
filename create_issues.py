@@ -43,12 +43,23 @@ def main():
     if not repo:
         sys.exit("No repo defined in the YAML or in GITHUB_REPO.")
 
-    for issue in config["issues"]:
+    issues = config.get("issues") or []
+    if not issues:
+        sys.exit("No issues defined in the YAML.")
+
+    falhas = 0
+    for issue in issues:
         try:
             url = create_issue(repo, token, issue)
             print(f"Created: {issue['title']} -> {url}")
         except requests.HTTPError as e:
+            falhas += 1
             print(f"Failed: {issue['title']} -> {e.response.status_code} {e.response.text}")
+        except requests.RequestException as e:
+            falhas += 1
+            print(f"Failed: {issue['title']} -> {e}")
+
+    sys.exit(1 if falhas else 0)
 
 if __name__ == "__main__":
     main()
