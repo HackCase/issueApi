@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import yaml
@@ -11,6 +11,7 @@ class Config:
     diretorias: frozenset[str]
     tipos: frozenset[str]
     membros: frozenset[str]
+    logins: dict[str, str] = field(default_factory=dict)  # nome -> login do GitHub
 
     @property
     def labels_permitidas(self) -> frozenset[str]:
@@ -30,6 +31,7 @@ def carregar_config(config_dir: Path) -> Config:
         diretorias=frozenset(labels.get("diretorias") or []),
         tipos=frozenset(labels.get("tipos") or []),
         membros=frozenset(m["nome"] for m in membros.get("membros") or []),
+        logins={m["nome"]: m["github"] for m in membros.get("membros") or [] if m.get("github")},
     )
 
 

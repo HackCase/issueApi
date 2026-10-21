@@ -8,12 +8,13 @@ from .erros import ErroApi
 from .guardrails.validators import PlanoInvalido
 from .pipeline.ata import AtaInvalida, EntradaInsuficiente
 from .pipeline.comum import SaidaInvalida
-from .rotas import grill, plano, reunioes
+from .rotas import grill, issues, plano, reunioes
 
 app = FastAPI(title="Núcleo de IA — Atas → Issues")
 app.include_router(reunioes.router)
 app.include_router(grill.router)
 app.include_router(plano.router)
+app.include_router(issues.router)
 
 
 def _erro(status: int, erro: str, detalhe) -> JSONResponse:
