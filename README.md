@@ -17,3 +17,11 @@ docker compose run --rm collector   # coleta (incremental)
 pip install -r requirements.txt
 python create_issues.py issues.yaml
 ```
+
+## Núcleo de IA (`src/core`)
+
+```bash
+pip install -e ".[dev]"
+ruff check src tests && pytest
+uvicorn core.main:app --reload     # GET /health
+```
