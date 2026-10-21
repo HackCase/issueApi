@@ -6,6 +6,7 @@ from ..guardrails.sanitize import Sanitizador
 from ..llm.base import LLMClient
 from ..prompts import carregar_prompt
 from ..schemas import MeetingInput
+from .comum import delimitar, texto_reuniao
 
 PROMPT = "ata.v1"
 SECOES = ["## Resumo executivo", "## Acompanhamento", "## Problemas levantados"]
@@ -18,18 +19,6 @@ class EntradaInsuficiente(ValueError):
 
 class AtaInvalida(RuntimeError):
     pass
-
-
-def _entrada(r: MeetingInput) -> str:
-    problemas = "\n".join(f"{pid}: {p}" for pid, p in zip(r.problema_ids, r.problemas, strict=True))
-    texto = (
-        f"Título: {r.titulo}\nData: {r.data:%d/%m/%Y}\n"
-        f"Participantes: {', '.join(r.participantes) or '(não informado)'}\n\n"
-        f"### Acompanhamento\n{r.acompanhamento}\n\n### Problemas\n{problemas}"
-    )
-    # o texto da reunião não pode fechar a tag de delimitação (prompt injection)
-    texto = re.sub(r"</?\s*reuniao[^>]*>", "", texto, flags=re.IGNORECASE)
-    return f"<reuniao>\n{texto}\n</reuniao>"
 
 
 def _limpar(corpo: str) -> str:
@@ -64,7 +53,7 @@ def gerar_ata(
         raise EntradaInsuficiente("informe mais contexto sobre o acompanhamento e os problemas")
 
     system = carregar_prompt(PROMPT).replace("{{contexto}}", contexto.strip() or "(não informado)")
-    entrada = _entrada(sanitizador.mascarar_reuniao(reuniao))
+    entrada = delimitar("reuniao", texto_reuniao(sanitizador.mascarar_reuniao(reuniao)))
 
     for _ in range(2):  # 1 retry
         r = llm.complete(

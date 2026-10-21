@@ -10,6 +10,7 @@ dependencies = [
     "pydantic-settings",
     "pyyaml",
     "httpx",
+    "psycopg[binary]",
 ]
 
 [project.optional-dependencies]

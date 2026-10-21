@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     llm_model_fast: str = ""
     llm_model_strong: str = ""
     embedding_model: str = ""
-    database_url: str = "postgresql://user:pass@localhost:5432/atas"
+    database_url: str = ""  # vazio = estado em memória (dev/testes)
     atas_mode: Literal["local", "github"] = "local"
     atas_repo: str = ""
     atas_branch: str = "main"

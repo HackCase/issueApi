@@ -4,11 +4,16 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException
 
+from .erros import ErroApi
+from .guardrails.validators import PlanoInvalido
 from .pipeline.ata import AtaInvalida, EntradaInsuficiente
-from .rotas import reunioes
+from .pipeline.comum import SaidaInvalida
+from .rotas import grill, plano, reunioes
 
 app = FastAPI(title="Núcleo de IA — Atas → Issues")
 app.include_router(reunioes.router)
+app.include_router(grill.router)
+app.include_router(plano.router)
 
 
 def _erro(status: int, erro: str, detalhe) -> JSONResponse:
@@ -33,6 +38,21 @@ async def _insuficiente(_: Request, e: EntradaInsuficiente):
 @app.exception_handler(AtaInvalida)
 async def _ata_invalida(_: Request, e: AtaInvalida):
     return _erro(502, "ata_invalida", e)
+
+
+@app.exception_handler(ErroApi)
+async def _erro_api(_: Request, e: ErroApi):
+    return _erro(e.status, e.erro, e.detalhe)
+
+
+@app.exception_handler(PlanoInvalido)
+async def _plano_invalido(_: Request, e: PlanoInvalido):
+    return _erro(422, "plano_invalido", e)
+
+
+@app.exception_handler(SaidaInvalida)
+async def _saida_invalida(_: Request, e: SaidaInvalida):
+    return _erro(502, "saida_invalida", e)
 
 
 @app.exception_handler(httpx.HTTPError)

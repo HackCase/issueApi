@@ -44,6 +44,9 @@ def validar_plano(
         erros.append(f"número de ações deve estar entre 1 e {max_acoes}: {len(plano.acoes)}")
 
     vistos: set[str] = set()
+    ids = [a.id for a in plano.acoes]
+    if len(ids) != len(set(ids)):
+        erros.append("ids de ação duplicados")
     for a in plano.acoes:
         fora = [lb for lb in a.labels if lb not in cfg.labels_permitidas]
         if fora:
