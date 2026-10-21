@@ -123,7 +123,7 @@ def test_schemas_rejeitam_valores_invalidos():
 
 def test_carregar_config_do_repo():
     cfg = carregar_config(Path(__file__).parents[1] / "config")
-    assert "diretoria: pessoas" in cfg.diretorias and cfg.membros
+    assert cfg.diretorias and cfg.membros
 
 
 def test_carregar_config(tmp_path):

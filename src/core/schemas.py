@@ -1,3 +1,5 @@
+import re
+import unicodedata
 from datetime import date
 from typing import Literal
 
@@ -13,6 +15,12 @@ class MeetingInput(BaseModel):
     participantes: list[str] = []
     acompanhamento: str  # rotina / status
     problemas: list[str] = Field(min_length=1)  # 1..N problemas em texto livre
+
+    @property
+    def reuniao_id(self) -> str:
+        slug = unicodedata.normalize("NFKD", self.titulo).encode("ascii", "ignore").decode()
+        slug = re.sub(r"[^a-z0-9]+", "-", slug.lower()).strip("-") or "reuniao"
+        return f"{self.data.isoformat()}-{slug}"
 
     @property
     def problema_ids(self) -> list[str]:
