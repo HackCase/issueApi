@@ -1,0 +1,59 @@
+from datetime import date
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field
+
+Prioridade = Literal["baixa", "media", "alta", "urgente"]
+Severidade = Literal["baixa", "media", "alta", "critica"]
+
+
+class MeetingInput(BaseModel):
+    titulo: str
+    data: date
+    participantes: list[str] = []
+    acompanhamento: str  # rotina / status
+    problemas: list[str] = Field(min_length=1)  # 1..N problemas em texto livre
+
+    @property
+    def problema_ids(self) -> list[str]:
+        return [f"p{i}" for i in range(1, len(self.problemas) + 1)]
+
+
+class GrillTurno(BaseModel):
+    pergunta: str
+    recomendacao: str | None = None  # resposta sugerida pela IA (estilo grill-me)
+    resposta: str | None = None  # preenchida pelo usuário
+
+
+class GrillSessao(BaseModel):
+    sessao_id: str
+    reuniao_id: str
+    turnos: list[GrillTurno]
+    status: Literal["em_andamento", "concluida"]
+    max_turnos: int = 5
+
+
+class Acao(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str  # a1, a2...
+    titulo: str  # curto, verbo no infinitivo
+    descricao: str
+    criterios_aceite: list[str] = Field(min_length=1)
+    labels: list[str]  # exatamente 1 diretoria + opcionais
+    prioridade: Prioridade
+    severidade: Severidade
+    estimativa: Literal[1, 2, 3, 5, 8, 13]
+    responsavel: str | None = None  # deve estar em membros.yaml, se informado
+    prazo: date | None = None
+    problema_origem: str  # ex.: p1
+
+
+class PlanoAcao(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    reuniao_id: str
+    status: Literal["rascunho", "aprovado"] = "rascunho"
+    acoes: list[Acao]
+    # problema_id -> justificativa de não gerar ação (5.4, última regra)
+    justificativas: dict[str, str] = {}

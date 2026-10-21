@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Issue YAML (SPEC 5.5)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "reuniao_id", "acao_id", "title", "body", "labels",
+               "assignees", "project_fields", "source"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "reuniao_id": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}-[a-z0-9-]+$"},
+    "acao_id": {"type": "string", "pattern": "^a\\d+$"},
+    "title": {"type": "string", "minLength": 1},
+    "body": {"type": "string", "minLength": 1},
+    "labels": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+    "assignees": {"type": "array", "items": {"type": "string"}},
+    "project_fields": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["prioridade", "severidade", "estimativa", "prazo"],
+      "properties": {
+        "prioridade": {"enum": ["baixa", "media", "alta", "urgente"]},
+        "severidade": {"enum": ["baixa", "media", "alta", "critica"]},
+        "estimativa": {"enum": [1, 2, 3, 5, 8, 13]},
+        "prazo": {"type": ["string", "null"], "pattern": "^\\d{4}-\\d{2}-\\d{2}$"}
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ata_path", "problema_id"],
+      "properties": {
+        "ata_path": {"type": "string"},
+        "problema_id": {"type": "string", "pattern": "^p\\d+$"}
+      }
+    }
+  }
+}
