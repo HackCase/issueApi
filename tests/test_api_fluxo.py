@@ -109,3 +109,26 @@ def test_saida_invalida_do_llm_vira_502(tmp_path):
     c.post("/reunioes", json=BODY)
     r = c.post(f"/reunioes/{RID}/plano")
     assert r.status_code == 502 and r.json()["erro"] == "saida_invalida"
+
+
+def test_issues_so_apos_aprovar_e_atualiza_a_ata(tmp_path):
+    c, _ = montar(tmp_path, [CORPO, {"concluido": True, "justificativa": "ok"}, plano_ok()])
+    (tmp_path / "membros.yaml").write_text("membros: [{nome: Ana, github: ana-gh}]")
+    c.post("/reunioes", json=BODY)
+    assert c.post(f"/reunioes/{RID}/issues").json()["erro"] == "plano_nao_encontrado"
+    c.post(f"/reunioes/{RID}/grill")
+    c.post(f"/reunioes/{RID}/plano")
+    r = c.post(f"/reunioes/{RID}/issues")
+    assert r.status_code == 409 and r.json()["erro"] == "plano_nao_aprovado"
+    assert not (tmp_path / "issues").exists()  # nada parcial
+
+    c.post(f"/reunioes/{RID}/plano/aprovar")
+    r = c.post(f"/reunioes/{RID}/issues")
+    assert r.status_code == 200
+    [item] = r.json()
+    assert item["acao_id"] == "a1" and item["path"] == f"out/issues/{RID}/a1.yml"
+    arquivo = tmp_path / "issues" / RID / "a1.yml"
+    assert arquivo.read_text(encoding="utf-8") == item["conteudo"]
+    ata = (tmp_path / f"docs/atas/{RID}.md").read_text(encoding="utf-8")
+    assert "`out/issues/" in ata and "Preenchido após" not in ata
+    assert c.post(f"/reunioes/{RID}/issues").json() == r.json()  # reexecutar é idempotente

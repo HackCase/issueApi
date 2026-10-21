@@ -1,0 +1,27 @@
+schema_version: 1
+reuniao_id: 2026-10-14-gestao-semanal
+acao_id: a1
+title: Padronizar template de onboarding de membros
+body: |
+  ## Contexto
+  Novos membros recebem orientações diferentes dependendo de quem os recebe, o que atrasa a primeira entrega. Criar um template único de onboarding.
+
+  ## Critérios de aceite
+  - [ ] Template publicado no repositório de documentação
+  - [ ] Checklist de onboarding aplicado a 100% dos novos membros do próximo ciclo
+
+  ## Origem
+  Problema p1 · Ata: docs/atas/2026-10-14-gestao-semanal.md
+labels:
+- 'diretoria: Diretoria de Gente & Gestão'
+- 'tipo: acao'
+assignees:
+- antoniocastro11
+project_fields:
+  prioridade: alta
+  severidade: media
+  estimativa: 3
+  prazo: '2026-10-30'
+source:
+  ata_path: docs/atas/2026-10-14-gestao-semanal.md
+  problema_id: p1
