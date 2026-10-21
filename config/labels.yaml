@@ -1,0 +1,10 @@
+diretorias:
+  - "diretoria: Diretoria de Projetos"
+  - "diretoria: Diretoria Comercial"
+  - "diretoria: Diretoria de Gente & Gestão"
+  - "diretoria: Diretoria de Marketing"
+  - "diretoria: Diretoria Administrativo Financeiro"
+  - "diretoria: Diretoria de Relações institucionais"
+tipos:
+  - "tipo: acao"
+  - "tipo: melhoria"

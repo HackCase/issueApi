@@ -1,0 +1,5 @@
+# TODO(humano): preencher com os valores atuais do provedor escolhido (USD por 1M de tokens)
+modelos:
+  exemplo-modelo:
+    entrada_por_mtok: 0.0
+    saida_por_mtok: 0.0
