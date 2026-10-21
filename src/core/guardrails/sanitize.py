@@ -59,6 +59,16 @@ class Sanitizador:
             texto = texto.replace(ph, original)
         return texto
 
+    def reverter_dados(self, x):
+        """Reverte recursivamente todas as strings de dict/list (saída JSON do LLM)."""
+        if isinstance(x, str):
+            return self.reverter(x)
+        if isinstance(x, list):
+            return [self.reverter_dados(i) for i in x]
+        if isinstance(x, dict):
+            return {k: self.reverter_dados(v) for k, v in x.items()}
+        return x
+
     def mascarar_reuniao(self, r: MeetingInput) -> MeetingInput:
         # participantes são membros da EJ (internos): não mascarados
         return r.model_copy(

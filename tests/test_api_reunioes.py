@@ -1,10 +1,11 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from core.deps import get_llm
+from core.deps import get_llm, get_store
 from core.llm.fake import FakeLLM
 from core.main import app
 from core.settings import Settings, get_settings
+from core.store import MemoryStore
 from tests.test_ata import CORPO
 
 BODY = {
@@ -21,6 +22,7 @@ def client(tmp_path):
     llm = FakeLLM([CORPO])
     app.dependency_overrides[get_settings] = lambda: Settings(out_dir=tmp_path, atas_mode="local")
     app.dependency_overrides[get_llm] = lambda: llm
+    app.dependency_overrides[get_store] = lambda: MemoryStore()
     yield TestClient(app), tmp_path, llm
     app.dependency_overrides.clear()
 
