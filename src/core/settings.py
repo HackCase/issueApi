@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     auto_approve: bool = False
     dry_run: bool = True
     config_dir: Path = RAIZ / "config"
+    out_dir: Path = RAIZ / "out"
 
 
 @lru_cache
