@@ -12,6 +12,7 @@ class Settings(BaseSettings):
 
     llm_provider: Literal["anthropic", "openai", "gemini"] = "anthropic"
     llm_api_key: str = ""
+    openai_base_url: str = "https://api.openai.com/v1"  # qualquer API compatível (Gemini, Groq, Ollama)
     llm_model_fast: str = ""
     llm_model_strong: str = ""
     embedding_model: str = ""

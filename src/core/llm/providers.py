@@ -92,7 +92,7 @@ class OpenAIClient(_Base):
         if system and "JSON" in system:
             body["response_format"] = {"type": "json_object"}
         r = self.http.post(
-            "https://api.openai.com/v1/chat/completions", headers=self._headers(), json=body
+            f"{self.s.openai_base_url}/chat/completions", headers=self._headers(), json=body
         )
         r.raise_for_status()
         d = r.json()
@@ -108,9 +108,9 @@ class OpenAIClient(_Base):
         if not self.s.embedding_model:
             raise RuntimeError("defina EMBEDDING_MODEL")
         r = self.http.post(
-            "https://api.openai.com/v1/embeddings",
+            f"{self.s.openai_base_url}/embeddings",
             headers=self._headers(),
-            json={"model": self.s.embedding_model, "input": textos},
+            json={"model": self.s.embedding_model, "input": textos, "dimensions": self.s.embedding_dim},
         )
         r.raise_for_status()
         return [i["embedding"] for i in r.json()["data"]]

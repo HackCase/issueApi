@@ -65,7 +65,7 @@ def test_build_client_por_provedor():
 def test_build_embedder_so_para_openai():
     from core.llm.providers import build_embedder
 
-    assert build_embedder(Settings(llm_provider="anthropic")) is None
+    assert build_embedder(Settings(llm_provider="anthropic", embedding_provider="")) is None
     e = build_embedder(
         Settings(
             llm_provider="anthropic",
@@ -75,4 +75,4 @@ def test_build_embedder_so_para_openai():
         )
     )
     assert type(e).__name__ == "OpenAIClient" and e.s.llm_api_key == "k"
-    assert build_embedder(Settings(llm_provider="openai", llm_api_key="x")).s.llm_api_key == "x"
+    assert build_embedder(Settings(llm_provider="openai", embedding_provider="", llm_api_key="x", embedding_api_key="")).s.llm_api_key == "x"
