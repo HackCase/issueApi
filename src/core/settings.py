@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     atas_repo: str = ""
     atas_branch: str = "main"
     github_token: str = ""
+    cors_origins: str = "http://localhost:5173"  # separadas por vírgula
     max_acoes: int = 12
     max_turnos_grill: int = 5
     dedup_threshold: float = 0.85
