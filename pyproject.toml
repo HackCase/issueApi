@@ -10,7 +10,7 @@ dependencies = [
     "pydantic-settings",
     "pyyaml",
     "httpx",
-    "psycopg[binary]",
+    "psycopg[binary,pool]",
 ]
 
 [project.optional-dependencies]
@@ -30,7 +30,7 @@ pythonpath = ["src"]
 [tool.ruff]
 line-length = 100
 src = ["src", "tests"]
-extend-exclude = ["backend", "collector", "create_issues.py"]
+extend-exclude = ["collector", "create_issues.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]

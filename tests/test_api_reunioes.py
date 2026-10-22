@@ -31,11 +31,11 @@ def test_post_reunioes_gera_e_salva_ata(client):
     c, out, _ = client
     r = c.post("/reunioes", json=BODY)
     assert r.status_code == 200
-    assert r.json() == {
-        "reuniao_id": "2026-10-14-gestao-semanal",
-        "ata_path": "docs/atas/2026-10-14-gestao-semanal.md",
-    }
-    assert "## Resumo executivo" in (out / r.json()["ata_path"]).read_text()
+    corpo = r.json()
+    assert corpo["reuniao_id"] == "2026-10-14-gestao-semanal"
+    assert corpo["ata_path"] == "docs/atas/2026-10-14-gestao-semanal.md"
+    assert "## Resumo executivo" in corpo["ata_md"]
+    assert corpo["ata_md"] == (out / corpo["ata_path"]).read_text()
 
 
 def test_erros_no_formato_do_contrato(client):
@@ -52,3 +52,21 @@ def test_ata_invalida_vira_502(client):
     llm.respostas[:] = ["lixo", "lixo"]
     r = c.post("/reunioes", json=BODY)
     assert r.status_code == 502 and r.json()["erro"] == "ata_invalida"
+
+
+def test_get_config(tmp_path):
+    (tmp_path / "labels.yaml").write_text(
+        'diretorias: ["diretoria: b", "diretoria: a"]\ntipos: ["tipo: acao"]'
+    )
+    (tmp_path / "membros.yaml").write_text("membros: [{nome: Ana, github: ana}, {nome: Bia}]")
+    app.dependency_overrides[get_settings] = lambda: Settings(config_dir=tmp_path)
+    try:
+        r = TestClient(app).get("/config")
+    finally:
+        app.dependency_overrides.clear()
+    assert r.json() == {
+        "diretorias": ["diretoria: a", "diretoria: b"],
+        "tipos": ["tipo: acao"],
+        "membros": [{"nome": "Ana", "github": "ana"}, {"nome": "Bia", "github": None}],
+        "max_acoes": 12,
+    }

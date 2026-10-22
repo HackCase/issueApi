@@ -1,20 +1,42 @@
+from contextlib import asynccontextmanager
+
 import httpx
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException
 
 from .erros import ErroApi
 from .guardrails.validators import PlanoInvalido
+from .metricas import db, pulls
+from .metricas import issues as metricas_issues
 from .pipeline.ata import AtaInvalida, EntradaInsuficiente
 from .pipeline.comum import SaidaInvalida
-from .rotas import grill, issues, plano, reunioes
+from .rotas import config, grill, issues, plano, reunioes
+from .settings import get_settings
 
-app = FastAPI(title="Núcleo de IA — Atas → Issues")
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    yield
+    db.fechar()
+
+
+app = FastAPI(title="Mega Jr. — Atas → Issues + métricas", lifespan=lifespan)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=get_settings().cors_origins.split(","),
+    allow_methods=["GET", "POST", "PATCH"],
+    allow_headers=["*"],
+)
+app.include_router(config.router)
 app.include_router(reunioes.router)
 app.include_router(grill.router)
 app.include_router(plano.router)
 app.include_router(issues.router)
+app.include_router(metricas_issues.router, prefix="/issues", tags=["métricas"])
+app.include_router(pulls.router, prefix="/pulls", tags=["métricas"])
 
 
 def _erro(status: int, erro: str, detalhe) -> JSONResponse:

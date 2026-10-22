@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Query
-from ..db import pool
+
+from . import db
 
 router = APIRouter()
 
@@ -20,8 +21,7 @@ def resolution_time(days: int = Query(90, ge=7, le=730)):
         GROUP BY 1
         ORDER BY 1
     """
-    with pool.connection() as conn:
-        return conn.execute(sql, (days,)).fetchall()
+    return db.todos(sql, (days,))
 
 
 @router.get("/throughput")
@@ -42,8 +42,7 @@ def throughput(days: int = Query(90, ge=7, le=730)):
         FROM abertas a FULL OUTER JOIN fechadas f ON a.semana = f.semana
         ORDER BY 1
     """
-    with pool.connection() as conn:
-        return conn.execute(sql, {"d": days}).fetchall()
+    return db.todos(sql, {"d": days})
 
 
 @router.get("/by-label")
@@ -55,8 +54,7 @@ def by_label():
         ORDER BY total DESC
         LIMIT 20
     """
-    with pool.connection() as conn:
-        return conn.execute(sql).fetchall()
+    return db.todos(sql)
 
 
 @router.get("/backlog-aging")
@@ -78,8 +76,7 @@ def backlog_aging():
             FROM issues WHERE state = 'open'
         ) t GROUP BY ordem, faixa ORDER BY ordem
     """
-    with pool.connection() as conn:
-        return conn.execute(sql).fetchall()
+    return db.todos(sql)
 
 
 @router.get("/summary")
@@ -92,5 +89,4 @@ def summary():
                            AND created_at < now() - interval '90 days') AS abertas_90d
         FROM issues
     """
-    with pool.connection() as conn:
-        return conn.execute(sql).fetchone()
+    return db.um(sql)
