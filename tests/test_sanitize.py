@@ -60,3 +60,8 @@ def test_carregar_clientes(tmp_path):
     assert carregar_clientes(tmp_path) == []
     (tmp_path / "clientes.yaml").write_text("clientes: [Acme]")
     assert carregar_clientes(tmp_path) == ["Acme"]
+
+
+def test_cliente_dentro_de_email_nao_vaza_a_parte_local():
+    out = Sanitizador(["Acme"]).mascarar("fale com joao@acme.com sobre a Acme")
+    assert "joao" not in out and "@" not in out and "Acme" not in out

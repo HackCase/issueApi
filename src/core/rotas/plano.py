@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 
-from ..deps import carregar_contexto, get_config, get_llm, get_store, novo_sanitizador
+from ..deps import carregar_contexto, get_config, get_llm, get_memoria, get_store, novo_sanitizador
 from ..erros import ErroApi
 from ..guardrails.validators import exigir_plano_valido
 from ..pipeline.plano import gerar_plano
@@ -27,6 +27,7 @@ def gerar(
     s: Settings = Depends(get_settings),
     llm=Depends(get_llm),
     store=Depends(get_store),
+    memoria=Depends(get_memoria),
 ) -> PlanoAcao:
     reg = _reuniao(store, reuniao_id)
     existente = obter(store, "plano", reuniao_id, PlanoAcao)
@@ -44,6 +45,7 @@ def gerar(
         llm,
         novo_sanitizador(s),
         carregar_contexto(s),
+        memoria,
     )
     if s.auto_approve:  # só para testes (SPEC seção 4)
         plano = plano.model_copy(update={"status": "aprovado"})

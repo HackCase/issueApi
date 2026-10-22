@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     llm_model_fast: str = ""
     llm_model_strong: str = ""
     embedding_model: str = ""
+    embedding_provider: str = ""  # vazio = o mesmo de LLM_PROVIDER (só "openai" tem embeddings)
+    embedding_api_key: str = ""  # vazio = LLM_API_KEY
+    embedding_dim: int = 1536  # deve bater com EMBEDDING_MODEL (text-embedding-3-small = 1536)
     database_url: str = ""  # vazio = estado em memória (dev/testes)
     atas_mode: Literal["local", "github"] = "local"
     atas_repo: str = ""
