@@ -4,7 +4,7 @@
 > Este arquivo é a **fonte da verdade** para codar com ajuda de GenAI.
 > Cole-o (ou aponte para ele) no início de cada sessão com o assistente.
 
-> **Status (2026-10-20):** o que existe hoje neste repo é a parte de **coleta e dashboard (passos 6 e 7)** — ver seção 2.1. O núcleo de IA (passos 2 a 5: `src/core`, prompts, guardrails, memória vetorial, eval) **ainda não foi implementado**; as seções 5 a 13 descrevem o alvo, não o estado atual.
+> **Status (2026-10-20):** o repo tem uma **API única** (`src/core`, `uvicorn core.main:app`) com o núcleo de IA (passos 2 a 5: ata, grill, plano, YAML, guardrails, memória vetorial) **e** as métricas do dashboard (passo 7), mais o coletor (`collector/`). Faltam eval/custo (T9), hardening (T10), documentação (T11) e pitch (T12) — ver seção 14.
 
 ---
 
@@ -43,7 +43,7 @@
 
 Entregável principal: **PoC funcional + arquitetura de software**. O time deve entregar: (1) código Python/no-code, (2) **conexão com APIs de LLM** (OpenAI, Anthropic…), (3) **prompt engineering e Vector DB**, (4) **guardrails** contra alucinações. Entrega até 23/10 às 23h59: vídeo ≤ 5 min + repositório GitHub com PoC funcional. Defesas síncronas 26–30/10.
 
-Situação (2026-10-20): o repo atual **não cobre ainda os itens 2, 3 e 4** — dependem do núcleo (T1–T8, seções 5–9). Coleta/dashboard (passos 6–7) é complementar. Corrigidos os problemas pendentes (branch `fix/correcoes-gerais`), as próximas fases devem priorizar o núcleo.
+Situação (2026-10-22): os itens 2, 3 e 4 estão implementados (T0–T8), mas **testados só com `FakeLLM`**; falta rodar com um LLM real. Coleta/dashboard (passos 6–7) é complementar.
 
 ## 2. Divisão de escopo
 
@@ -57,23 +57,23 @@ Situação (2026-10-20): o repo atual **não cobre ainda os itens 2, 3 e 4** —
 
 ## 2.1 Estado atual da implementação
 
-Implementado (commits `fa50786`..`3d441f5`):
+Implementado fora do núcleo (parceiro) e unificado na API única:
 
 | Item | Onde | Observação |
 | ---- | ---- | ---------- |
 | Criação de issues a partir de YAML (passo 6, versão simples) | `create_issues.py` + `issues.yaml` | Script CLI: lê `repo` e lista `issues` (`title`, `body`, `labels`, `assignees`) e faz `POST /repos/{repo}/issues` com `GITHUB_TOKEN`. **Não** usa o schema da seção 5.5 (sem `schema_version`, `project_fields`, `source`) e não adiciona ao Projects v2 |
 | Coletor GitHub → Postgres (passo 7) | `collector/` (`collect.py`, `github_client.py`, `schema.sql`) | Coleta repos, issues e PRs da org `GITHUB_ORG`; incremental via tabela `sync_state`; trata rate limit (primário e secundário) e pula repos sem acesso (404/410); `first_review_at` = primeira review de alguém que não o autor |
-| API do dashboard | `backend/app/` (FastAPI + psycopg pool) | Rotas da seção 8.2; CORS via `CORS_ORIGINS` |
-| Containerização | `Dockerfile`, `docker-compose.yml` | Serviços `db` (postgres:16-alpine, porta host 5440), `api` (porta 8000) e `collector` (profile `collector`: `docker compose run --rm collector`) |
+| Métricas do dashboard | `src/core/metricas/` (psycopg pool, criado no primeiro uso) | Rotas da seção 8.2, na mesma app do núcleo; sem `DATABASE_URL` respondem 503 `sem_banco` |
+| Containerização | `Dockerfile`, `docker-compose.yml` | Serviços `db` (`pgvector/pgvector:pg16`, porta host 5440), `api` (`core.main:app`, porta 8000) e `collector` (profile `collector`: `docker compose run --rm collector`) |
 
 Tabelas (`collector/schema.sql`): `repos`, `issues` (com `labels TEXT[]`), `pull_requests`, `sync_state`.
 
-Não implementado: tudo da seção 14 de T1 a T12, e também o esqueleto T0 do núcleo (`pyproject.toml`, `settings.py`, `ruff`/`pytest`, `src/core`). Não há testes. Existem `.env.example`, `requirements.txt` (dependências do `create_issues.py`) e um `README.md` básico (setup e uso).
+Não implementado: T9 a T12 (seção 14). Testes: `tests/` (pytest + `FakeLLM`).
 
 ## 3. Stack
 
 - **Python 3.11+** (imagem Docker atual: 3.12), **FastAPI**, **Pydantic v2**, **PyYAML**, **httpx** (coletor) / **requests** (`create_issues.py`), **python-dotenv**
-- **Postgres + pgvector** (memória entre reuniões e sessões de grill). *Hoje:* `postgres:16-alpine` sem pgvector, usado só pelo dashboard; trocar a imagem ao implementar T8
+- **Postgres + pgvector** (memória entre reuniões e sessões de grill). *Hoje:* imagem `pgvector/pgvector:pg16`, usada pelo dashboard e pela memória
 - **`psycopg` 3 direto** (com `psycopg_pool` e SQL puro; decisão tomada — sem SQLAlchemy/Alembic; o schema é aplicado por `schema.sql`)
 - **LLM:** camada fina `LLMClient` com interface única, para trocar de provedor (OpenAI, Anthropic, Gemini) sem tocar no resto
 - **Embeddings:** provedor configurável (via `LLMClient.embed`)
@@ -269,11 +269,11 @@ Regras: `schema_version` sempre presente; sem campos extras; saída determiníst
 
 ## 8. API
 
-### 8.1 API do núcleo (contrato com o parceiro; alvo, não implementada)
+### 8.1 Rotas do núcleo (contrato com o frontend; implementadas, exceto `/custo` — T9)
 
 | Método  | Rota                           | Descrição                                                                   |
 | ------- | ------------------------------ | --------------------------------------------------------------------------- |
-| `POST`  | `/reunioes`                    | Recebe `MeetingInput`, gera e salva a ata. Retorna `{reuniao_id, ata_path}` |
+| `POST`  | `/reunioes`                    | Recebe `MeetingInput`, gera e salva a ata. Retorna `{reuniao_id, ata_path, ata_md}` |
 | `POST`  | `/reunioes/{id}/grill`         | Inicia sessão. Retorna `GrillSessao` com a 1ª pergunta                      |
 | `POST`  | `/grill/{sessao_id}/respostas` | Envia resposta; retorna próxima pergunta ou `status=concluida`              |
 | `POST`  | `/reunioes/{id}/plano`         | Gera `PlanoAcao` (rascunho)                                                 |
@@ -281,27 +281,28 @@ Regras: `schema_version` sempre presente; sem campos extras; saída determiníst
 | `POST`  | `/reunioes/{id}/plano/aprovar` | Marca como aprovado                                                         |
 | `POST`  | `/reunioes/{id}/issues`        | Gera os YAMLs. Retorna lista de caminhos e conteúdo                         |
 | `GET`   | `/reunioes/{id}/custo`         | Tokens e custo por etapa                                                    |
+| `GET`   | `/config`                      | Allowlists para o frontend: `diretorias`, `tipos`, `membros[{nome, github}]`, `max_acoes` |
 | `GET`   | `/health`                      | Healthcheck                                                                 |
 
 Todos os erros seguem `{ "erro": "codigo", "detalhe": "..." }`. Documentar no OpenAPI (automático no FastAPI).
 
-### 8.2 API do dashboard (implementada, `backend/app`)
+### 8.2 Métricas do dashboard (implementadas, `src/core/metricas`)
 
-Somente `GET`, prefixo `/api`. Parâmetro `days` (7–730, padrão 90) onde indicado. Resposta: JSON (lista de linhas ou objeto).
+Somente `GET`, sem prefixo (mesma API do núcleo). Parâmetro `days` (7–730, padrão 90) onde indicado. Resposta: JSON (lista de linhas ou objeto).
 
 | Rota                           | Retorno                                                                   |
 | ------------------------------ | ------------------------------------------------------------------------- |
-| `/api/health`                  | `{status: "ok"}`                                                          |
-| `/api/issues/resolution-time`  | por semana: `fechadas`, `mediana_h`, `p90_h` (`days`)                     |
-| `/api/issues/throughput`       | por semana: `abertas`, `fechadas` (`days`)                                |
-| `/api/issues/by-label`         | top 20 labels: `label`, `total`                                           |
-| `/api/issues/backlog-aging`    | issues abertas por faixa (0-7, 8-30, 31-90, 90+ dias)                     |
-| `/api/issues/summary`          | `abertas`, `fechadas`, `abertas_90d`                                      |
-| `/api/pulls/review-time`       | por semana: `primeira_review_h`, `ate_merge_h` (medianas) (`days`)        |
-| `/api/pulls/size-distribution` | PRs mergeados por tamanho (P ≤50, M ≤250, G ≤1000, GG) em linhas alteradas |
-| `/api/pulls/merge-rate`        | `merged`, `fechados_sem_merge`, `abertos`                                 |
+| `/health`                  | `{status: "ok"}`                                                          |
+| `/issues/resolution-time`  | por semana: `fechadas`, `mediana_h`, `p90_h` (`days`)                     |
+| `/issues/throughput`       | por semana: `abertas`, `fechadas` (`days`)                                |
+| `/issues/by-label`         | top 20 labels: `label`, `total`                                           |
+| `/issues/backlog-aging`    | issues abertas por faixa (0-7, 8-30, 31-90, 90+ dias)                     |
+| `/issues/summary`          | `abertas`, `fechadas`, `abertas_90d`                                      |
+| `/pulls/review-time`       | por semana: `primeira_review_h`, `ate_merge_h` (medianas) (`days`)        |
+| `/pulls/size-distribution` | PRs mergeados por tamanho (P ≤50, M ≤250, G ≤1000, GG) em linhas alteradas |
+| `/pulls/merge-rate`        | `merged`, `fechados_sem_merge`, `abertos`                                 |
 
-Nota: o `/health` do núcleo (8.1) ainda não existe; hoje o único healthcheck é `/api/health`. Ao criar o núcleo, decidir se ele vira outro serviço ou se as rotas são unificadas sob o mesmo prefixo (o núcleo usa rotas sem `/api`).
+O `/health` é único. O CORS (`CORS_ORIGINS`) libera `GET`, `POST` e `PATCH`.
 
 ## 9. Guardrails
 
@@ -326,7 +327,7 @@ GITHUB_TOKEN=          # coletor e create_issues.py
 GITHUB_ORG=            # coletor: org cujos repos são coletados
 GITHUB_REPO=           # opcional: repo padrão do create_issues.py
 DATABASE_URL=          # no docker-compose é sobrescrita para o serviço db
-CORS_ORIGINS=http://localhost:5173   # API do dashboard; lista separada por vírgula
+CORS_ORIGINS=http://localhost:5173   # CORS da API; lista separada por vírgula
 ```
 
 **Alvo do núcleo** (ainda não usadas):
@@ -381,7 +382,7 @@ DRY_RUN=true
 
 Cada tarefa tem um prompt pronto. Rode uma, revise, rode os testes, só então avance.
 
-> **Andamento:** T0–T2 em `main`; T3 e T4 em `main`; T5 e T6 em `main`; T7 em `main`; T8 implementado na branch `feat/vetorial`. T9–T12 não iniciadas. Fora do plano, já feitos: coletor, API do dashboard e `create_issues.py` (seção 2.1).
+> **Andamento:** T0–T2 em `main`; T3 e T4 em `main`; T5 e T6 em `main`; T7 em `main`; T8 em `main` (merge pendente de PR). T9–T12 não iniciadas. Fora do plano, já feitos: coletor, métricas do dashboard (unificadas na API do núcleo, sem prefixo `/api`) e `create_issues.py` (seção 2.1).
 
 **T0 — Esqueleto (14–15/10)**
 
