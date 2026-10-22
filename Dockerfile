@@ -2,13 +2,14 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-COPY backend/requirements.txt /tmp/backend-req.txt
-COPY collector/requirements.txt /tmp/collector-req.txt
-RUN pip install --no-cache-dir -r /tmp/backend-req.txt -r /tmp/collector-req.txt
-
-COPY backend ./backend
+COPY pyproject.toml ./
+COPY src ./src
 COPY collector ./collector
+# editável: o núcleo localiza config/ e prompts/ relativo à raiz do repo
+RUN pip install --no-cache-dir -e . -r collector/requirements.txt
 
-# padrao: API. O coletor roda com `docker compose run --rm collector`
-WORKDIR /app/backend
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+COPY config ./config
+COPY prompts ./prompts
+
+# padrão: API. O coletor roda com `docker compose run --rm collector`
+CMD ["uvicorn", "core.main:app", "--host", "0.0.0.0", "--port", "8000"]
