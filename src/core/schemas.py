@@ -57,6 +57,13 @@ class Acao(BaseModel):
     problema_origem: str  # ex.: p1
 
 
+class Duplicata(BaseModel):
+    reuniao_id: str
+    acao_id: str
+    titulo: str
+    similaridade: float
+
+
 class PlanoAcao(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -65,3 +72,7 @@ class PlanoAcao(BaseModel):
     acoes: list[Acao]
     # problema_id -> justificativa de não gerar ação (5.4, última regra)
     justificativas: dict[str, str] = {}
+    # preenchidos pela memória vetorial; só informativos (o humano decide), não vão pro YAML
+    recorrencias: dict[str, int] = {}  # problema_id -> nº de reuniões anteriores com o problema
+    possiveis_duplicatas: dict[str, Duplicata] = {}  # acao_id -> issue anterior parecida
+    avisos: list[str] = []  # ex.: memória vetorial indisponível (modo degradado)

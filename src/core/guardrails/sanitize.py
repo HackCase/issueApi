@@ -5,7 +5,7 @@ import yaml
 
 from ..schemas import MeetingInput
 
-# Ordem importa: e-mail antes dos números; CNPJ antes de CPF antes de telefone.
+# Ordem importa: e-mail antes dos clientes e dos números; CNPJ antes de CPF antes de telefone.
 # ponytail: 11 dígitos soltos viram CPF (não telefone) e qualquer grupo de 8 dígitos vira
 # telefone; super-mascarar é o lado seguro (refinar com dígito verificador se incomodar).
 PADROES = [
@@ -39,7 +39,7 @@ class Sanitizador:
         nomes = sorted({c.strip() for c in clientes if c.strip()}, key=len, reverse=True)
         if nomes:
             rx = re.compile(r"\b(?:" + "|".join(map(re.escape, nomes)) + r")\b", re.IGNORECASE)
-            self._padroes.insert(0, ("CLIENTE", rx))
+            self._padroes.insert(1, ("CLIENTE", rx))  # depois do e-mail: joao@acme.com é e-mail
 
     def _placeholder(self, tipo: str, original: str) -> str:
         chave = (tipo, original.casefold())

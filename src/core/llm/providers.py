@@ -116,6 +116,14 @@ class OpenAIClient(_Base):
         return [i["embedding"] for i in r.json()["data"]]
 
 
+def build_embedder(settings: Settings | None = None):
+    """Cliente só para embeddings, ou None se o provedor não oferece (ex.: anthropic)."""
+    s = settings or get_settings()
+    if (s.embedding_provider or s.llm_provider) != "openai":
+        return None
+    return OpenAIClient(s.model_copy(update={"llm_api_key": s.embedding_api_key or s.llm_api_key}))
+
+
 def build_client(settings: Settings | None = None):
     s = settings or get_settings()
     if s.llm_provider == "anthropic":

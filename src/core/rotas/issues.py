@@ -1,6 +1,8 @@
+import logging
+
 from fastapi import APIRouter, Depends
 
-from ..deps import get_config, get_store
+from ..deps import get_config, get_memoria, get_store, novo_sanitizador
 from ..erros import ErroApi
 from ..integrations.atas_repo import salvar_ata
 from ..pipeline.issues_yaml import atualizar_ata, caminho_yaml, gerar_issues
@@ -10,10 +12,16 @@ from ..settings import Settings, get_settings
 from ..store import obter, salvar
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.post("/reunioes/{reuniao_id}/issues")
-def gerar(reuniao_id: str, s: Settings = Depends(get_settings), store=Depends(get_store)):
+def gerar(
+    reuniao_id: str,
+    s: Settings = Depends(get_settings),
+    store=Depends(get_store),
+    memoria=Depends(get_memoria),
+):
     reg = _reuniao(store, reuniao_id)
     plano = obter(store, "plano", reuniao_id, PlanoAcao)
     if plano is None:
@@ -28,6 +36,11 @@ def gerar(reuniao_id: str, s: Settings = Depends(get_settings), store=Depends(ge
     ata = atualizar_ata(reg.ata_md, plano)
     salvar_ata(reuniao_id, ata, s)
     salvar(store, "reuniao", reuniao_id, reg.model_copy(update={"ata_md": ata}))
+    if memoria:
+        try:
+            memoria.registrar_issues(plano, novo_sanitizador(s))
+        except Exception as e:  # noqa: BLE001 - modo degradado: os YAMLs já foram gerados
+            logger.warning("memória vetorial falhou ao registrar as issues: %s", e)
     return [
         {"acao_id": a, "path": caminho_yaml(reuniao_id, a), "conteudo": t} for a, t in yamls.items()
     ]
