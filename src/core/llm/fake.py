@@ -53,4 +53,7 @@ class FakeLLM:
 
     def embed(self, textos: list[str]) -> list[list[float]]:
         # vetor determinístico por texto: textos iguais -> vetores iguais
-        return [[b / 255 for b in hashlib.sha256(t.encode()).digest()[:DIM]] for t in textos]
+        # centrado em zero: textos diferentes ficam pouco similares (cosseno perto de 0)
+        return [
+            [(b - 127.5) / 127.5 for b in hashlib.sha256(t.encode()).digest()[:DIM]] for t in textos
+        ]

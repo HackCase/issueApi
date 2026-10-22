@@ -1,9 +1,11 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from core.deps import get_llm, get_store
+from core.deps import get_llm, get_memoria, get_store
 from core.llm.fake import FakeLLM
 from core.main import app
+from core.memory.memoria import Memoria
+from core.memory.vector import VetoresMem
 from core.settings import Settings, get_settings
 from core.store import MemoryStore
 from tests.test_api_reunioes import BODY
@@ -132,3 +134,46 @@ def test_issues_so_apos_aprovar_e_atualiza_a_ata(tmp_path):
     ata = (tmp_path / f"docs/atas/{RID}.md").read_text(encoding="utf-8")
     assert "`out/issues/" in ata and "Preenchido após" not in ata
     assert c.post(f"/reunioes/{RID}/issues").json() == r.json()  # reexecutar é idempotente
+
+
+def test_memoria_integrada_recorrencia_e_duplicata_entre_reunioes(tmp_path):
+    ata2 = CORPO.replace("onboarding", "onboarding de membros")
+    sem_grill = {"concluido": True, "justificativa": "ok"}
+    c, _ = montar(
+        tmp_path, [CORPO, sem_grill, plano_ok(), ata2, sem_grill, plano_ok()], auto_approve=True
+    )
+    mem = Memoria(VetoresMem(), FakeLLM(), 0.85)
+    app.dependency_overrides[get_memoria] = lambda: mem
+
+    c.post("/reunioes", json=BODY)
+    c.post(f"/reunioes/{RID}/grill")
+    primeiro = c.post(f"/reunioes/{RID}/plano").json()
+    assert primeiro["recorrencias"] == {} and primeiro["possiveis_duplicatas"] == {}
+    assert c.post(f"/reunioes/{RID}/issues").status_code == 200  # indexa as issues
+
+    outra = {**BODY, "titulo": "Gestão extra", "data": "2026-10-21"}
+    rid2 = "2026-10-21-gestao-extra"
+    c.post("/reunioes", json=outra)
+    c.post(f"/reunioes/{rid2}/grill")
+    p = c.post(f"/reunioes/{rid2}/plano").json()
+    assert p["recorrencias"] == {"p1": 1}
+    assert p["possiveis_duplicatas"]["a1"]["reuniao_id"] == RID
+    assert p["avisos"] == []
+
+
+def test_memoria_fora_do_ar_nao_quebra_nenhuma_rota(tmp_path):
+    class Quebrada:
+        def __getattr__(self, nome):
+            def falha(*a, **k):
+                raise ConnectionError("banco fora")
+
+            return falha
+
+    c, _ = montar(tmp_path, [CORPO, {"concluido": True, "justificativa": "ok"}, plano_ok()])
+    app.dependency_overrides[get_memoria] = lambda: Quebrada()
+    assert c.post("/reunioes", json=BODY).status_code == 200
+    c.post(f"/reunioes/{RID}/grill")
+    p = c.post(f"/reunioes/{RID}/plano").json()
+    assert p["acoes"] and "banco fora" in p["avisos"][0]
+    c.post(f"/reunioes/{RID}/plano/aprovar")
+    assert c.post(f"/reunioes/{RID}/issues").status_code == 200

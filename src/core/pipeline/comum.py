@@ -7,7 +7,7 @@ from ..llm.base import LLMClient, T
 from ..schemas import MeetingInput
 
 # o texto vindo do usuário/LLM não pode abrir nem fechar as tags de delimitação
-_TAGS = re.compile(r"</?\s*(reuniao|ata|grill|plano)[^>]*>", re.IGNORECASE)
+_TAGS = re.compile(r"</?\s*(reuniao|ata|grill|plano|historico)[^>]*>", re.IGNORECASE)
 
 
 class SaidaInvalida(RuntimeError):
