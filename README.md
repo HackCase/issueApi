@@ -7,7 +7,7 @@ Faz parte do projeto Atas → Plano de Ação → Issues (ver `sdd/spec.md`).
 
 ```bash
 cp .env.example .env            # preencher GITHUB_TOKEN e GITHUB_ORG
-docker compose up -d            # db + api em http://localhost:8000/docs
+docker compose up -d            # db + API única em http://localhost:8000/docs
 docker compose run --rm collector   # coleta (incremental)
 ```
 
@@ -23,5 +23,5 @@ python create_issues.py issues.yaml
 ```bash
 pip install -e ".[dev]"
 ruff check src tests && pytest
-uvicorn core.main:app --reload     # GET /health
+uvicorn core.main:app --reload     # API única: atas (/reunioes...) e métricas (/issues/*, /pulls/*)
 ```
