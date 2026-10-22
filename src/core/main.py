@@ -13,7 +13,7 @@ from .metricas import db, pulls
 from .metricas import issues as metricas_issues
 from .pipeline.ata import AtaInvalida, EntradaInsuficiente
 from .pipeline.comum import SaidaInvalida
-from .rotas import grill, issues, plano, reunioes
+from .rotas import config, grill, issues, plano, reunioes
 from .settings import get_settings
 
 
@@ -30,6 +30,7 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PATCH"],
     allow_headers=["*"],
 )
+app.include_router(config.router)
 app.include_router(reunioes.router)
 app.include_router(grill.router)
 app.include_router(plano.router)

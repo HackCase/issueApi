@@ -36,4 +36,4 @@ def criar_reuniao(
             memoria.registrar_ata(reuniao, san)
         except Exception as e:  # noqa: BLE001 - modo degradado: a ata já foi salva
             logger.warning("memória vetorial falhou ao registrar a ata: %s", e)
-    return {"reuniao_id": reuniao.reuniao_id, "ata_path": ata_path}
+    return {"reuniao_id": reuniao.reuniao_id, "ata_path": ata_path, "ata_md": ata}
