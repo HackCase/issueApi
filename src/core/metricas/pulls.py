@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Query
-from ..db import pool
+
+from . import db
 
 router = APIRouter()
 
@@ -20,8 +21,7 @@ def review_time(days: int = Query(90, ge=7, le=730)):
         WHERE created_at >= now() - make_interval(days => %s)
         GROUP BY 1 ORDER BY 1
     """
-    with pool.connection() as conn:
-        return conn.execute(sql, (days,)).fetchall()
+    return db.todos(sql, (days,))
 
 
 @router.get("/size-distribution")
@@ -45,8 +45,7 @@ def size_distribution():
               AND additions IS NOT NULL AND deletions IS NOT NULL
         ) t GROUP BY ordem, faixa ORDER BY ordem
     """
-    with pool.connection() as conn:
-        return conn.execute(sql).fetchall()
+    return db.todos(sql)
 
 
 @router.get("/merge-rate")
@@ -58,5 +57,4 @@ def merge_rate():
           COUNT(*) FILTER (WHERE state='open')                                AS abertos
         FROM pull_requests
     """
-    with pool.connection() as conn:
-        return conn.execute(sql).fetchone()
+    return db.um(sql)
