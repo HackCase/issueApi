@@ -16,6 +16,7 @@ services:
 
   api:
     build: .
+    user: "${UID:-1000}:${GID:-1000}"  # out/ é do usuário do host, não do root
     env_file: .env
     environment:
       DATABASE_URL: postgresql://postgres:dev@db:5432/issues

@@ -75,4 +75,16 @@ def test_build_embedder_so_para_openai():
         )
     )
     assert type(e).__name__ == "OpenAIClient" and e.s.llm_api_key == "k"
-    assert build_embedder(Settings(llm_provider="openai", embedding_provider="", llm_api_key="x", embedding_api_key="")).s.llm_api_key == "x"
+    s = Settings(llm_provider="openai", embedding_provider="", llm_api_key="x")
+    s.embedding_api_key = ""
+    assert build_embedder(s).s.llm_api_key == "x"
+
+
+def test_valor_que_e_so_comentario_vira_vazio(monkeypatch):
+    # docker compose repassa `EMBEDDING_API_KEY=   # vazio` como "# vazio"
+    monkeypatch.setenv("EMBEDDING_API_KEY", "# vazio = usa LLM_API_KEY")
+    s = Settings(llm_provider="openai", embedding_provider="openai", llm_api_key="k")
+    assert s.embedding_api_key == ""
+    assert Settings(embedding_api_key="chave # não é comentário").embedding_api_key.startswith(
+        "chave"
+    )

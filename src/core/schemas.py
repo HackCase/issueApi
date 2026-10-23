@@ -27,18 +27,24 @@ class MeetingInput(BaseModel):
         return [f"p{i}" for i in range(1, len(self.problemas) + 1)]
 
 
-class GrillTurno(BaseModel):
+class GrillPergunta(BaseModel):
+    id: str  # r1q1, r1q2, r2q1...
+    problema_id: str | None = None  # p1, p2... ou null para pergunta geral
     pergunta: str
     recomendacao: str | None = None  # resposta sugerida pela IA (estilo grill-me)
     resposta: str | None = None  # preenchida pelo usuário
 
 
+class GrillRodada(BaseModel):
+    perguntas: list[GrillPergunta]
+
+
 class GrillSessao(BaseModel):
     sessao_id: str
     reuniao_id: str
-    turnos: list[GrillTurno]
+    rodadas: list[GrillRodada]  # a última é a que está em aberto enquanto status=em_andamento
     status: Literal["em_andamento", "concluida"]
-    max_turnos: int = 5
+    max_rodadas: int = 2
 
 
 class Acao(BaseModel):

@@ -1,10 +1,14 @@
 import json
+import logging
 import re
+import time
 
 import httpx
 
 from ..settings import Settings, get_settings
 from .base import Resposta, T
+
+logger = logging.getLogger(__name__)
 
 _JSON_INSTR = (
     "Responda APENAS com um objeto JSON válido que siga este JSON Schema, "
@@ -22,6 +26,15 @@ class _Base:
     def __init__(self, s: Settings, timeout: float = 120):
         self.s = s
         self.http = httpx.Client(timeout=timeout)
+
+    def _post(self, url, **kw):
+        """POST com retentativa em 429/5xx (tier gratuito do Gemini: ~5 req/min)."""
+        for espera in (5, 20, 40, 60, None):
+            r = self.http.post(url, **kw)
+            if r.status_code not in (429, 500, 502, 503, 529) or espera is None:
+                return r
+            logger.warning("LLM respondeu %s; nova tentativa em %ss", r.status_code, espera)
+            time.sleep(espera)
 
     def _modelo(self, forte: bool) -> str:
         modelo = self.s.llm_model_strong if forte else self.s.llm_model_fast
@@ -68,7 +81,7 @@ class AnthropicClient(_Base):
         }
         if system:
             body["system"] = system
-        r = self.http.post(
+        r = self._post(
             "https://api.anthropic.com/v1/messages",
             headers={"x-api-key": self.s.llm_api_key, "anthropic-version": "2023-06-01"},
             json=body,
@@ -91,7 +104,7 @@ class OpenAIClient(_Base):
         # JSON mode exige a palavra "JSON" no prompt; complete_json sempre a inclui
         if system and "JSON" in system:
             body["response_format"] = {"type": "json_object"}
-        r = self.http.post(
+        r = self._post(
             f"{self.s.openai_base_url}/chat/completions", headers=self._headers(), json=body
         )
         r.raise_for_status()
@@ -107,10 +120,14 @@ class OpenAIClient(_Base):
     def embed(self, textos):
         if not self.s.embedding_model:
             raise RuntimeError("defina EMBEDDING_MODEL")
-        r = self.http.post(
+        r = self._post(
             f"{self.s.openai_base_url}/embeddings",
             headers=self._headers(),
-            json={"model": self.s.embedding_model, "input": textos, "dimensions": self.s.embedding_dim},
+            json={
+                "model": self.s.embedding_model,
+                "input": textos,
+                "dimensions": self.s.embedding_dim,
+            },
         )
         r.raise_for_status()
         return [i["embedding"] for i in r.json()["data"]]
