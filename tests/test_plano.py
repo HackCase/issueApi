@@ -7,7 +7,7 @@ from core.guardrails.validators import Config
 from core.llm.fake import FakeLLM
 from core.pipeline.comum import SaidaInvalida
 from core.pipeline.plano import gerar_plano
-from core.schemas import GrillSessao, GrillTurno, MeetingInput
+from core.schemas import GrillPergunta, GrillRodada, GrillSessao, MeetingInput
 
 CFG = Config(frozenset({"diretoria: pessoas"}), frozenset({"tipo: acao"}), frozenset({"Ana"}))
 R = MeetingInput(
@@ -19,7 +19,13 @@ R = MeetingInput(
 GRILL = GrillSessao(
     sessao_id="s",
     reuniao_id=R.reuniao_id,
-    turnos=[GrillTurno(pergunta="Quem é o dono?", resposta="Ana, para a Acme")],
+    rodadas=[
+        GrillRodada(
+            perguntas=[
+                GrillPergunta(id="r1q1", pergunta="Quem é o dono?", resposta="Ana, para a Acme")
+            ]
+        )
+    ],
     status="concluida",
 )
 

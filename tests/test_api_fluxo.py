@@ -16,7 +16,13 @@ RID = "2026-10-14-gestao-semanal"
 
 
 def q(n):
-    return {"pergunta": f"P{n}?", "recomendacao": f"R{n}", "concluido": False}
+    return {
+        "perguntas": [
+            {"problema_id": "p1", "pergunta": f"P{n}a?", "recomendacao": f"R{n}a"},
+            {"pergunta": f"P{n}b?", "recomendacao": f"R{n}b"},
+        ],
+        "concluido": False,
+    }
 
 
 def montar(tmp_path, respostas, **cfg):
@@ -26,7 +32,7 @@ def montar(tmp_path, respostas, **cfg):
     )
     (tmp_path / "membros.yaml").write_text("membros: [{nome: Ana}]")
     app.dependency_overrides[get_settings] = lambda: Settings(
-        out_dir=tmp_path, config_dir=tmp_path, max_turnos_grill=2, database_url="", **cfg
+        out_dir=tmp_path, config_dir=tmp_path, max_rodadas_grill=2, database_url="", **cfg
     )
     app.dependency_overrides[get_llm] = lambda: llm
     store = MemoryStore()
@@ -49,7 +55,10 @@ def test_fluxo_completo(tmp_path):
     assert c.post("/reunioes", json=BODY).status_code == 200
 
     s = c.post(f"/reunioes/{RID}/grill").json()
-    assert s["status"] == "em_andamento" and s["turnos"][0]["pergunta"] == "P1?"
+    ps = s["rodadas"][0]["perguntas"]
+    assert s["status"] == "em_andamento" and s["max_rodadas"] == 2
+    assert [p["id"] for p in ps] == ["r1q1", "r1q2"] and ps[0]["problema_id"] == "p1"
+    assert ps[1]["problema_id"] is None and ps[0]["resposta"] is None
     assert c.post(f"/reunioes/{RID}/grill").json()["sessao_id"] == s["sessao_id"]  # idempotente
 
     # plano antes do fim do grill é bloqueado
@@ -57,10 +66,21 @@ def test_fluxo_completo(tmp_path):
     assert r.status_code == 409 and r.json()["erro"] == "grill_em_andamento"
 
     url = f"/grill/{s['sessao_id']}/respostas"
-    assert c.post(url, json={"resposta": "dono é a Ana"}).json()["status"] == "em_andamento"
-    fim = c.post(url, json={"aceitar_recomendacao": True}).json()  # 2º turno = max_turnos
-    assert fim["status"] == "concluida" and fim["turnos"][1]["resposta"] == "R2"
-    assert c.post(url, json={"resposta": "x"}).status_code == 409
+    r = c.post(url, json={"respostas": [{"id": "r1q1", "resposta": "só esta"}]})  # falta r1q2
+    assert r.status_code == 422 and r.json() == {"erro": "respostas_incompletas", "detalhe": "r1q2"}
+    corpo = {
+        "respostas": [{"id": "r1q1", "resposta": "dono é a Ana"}],
+        "aceitar_recomendacoes": True,
+    }
+    s2 = c.post(url, json=corpo).json()
+    assert s2["status"] == "em_andamento" and len(s2["rodadas"]) == 2
+    assert s2["rodadas"][0]["perguntas"][1]["resposta"] == "R1b"  # recomendação aceita
+    corpo = {
+        "respostas": [{"id": "r2q1", "aceitar_recomendacao": True}, {"id": "r2q2", "resposta": "x"}]
+    }
+    fim = c.post(url, json=corpo).json()  # 2ª rodada = max_rodadas
+    assert fim["status"] == "concluida" and fim["rodadas"][1]["perguntas"][0]["resposta"] == "R2a"
+    assert c.post(url, json={"aceitar_recomendacoes": True}).status_code == 409
 
     p = c.post(f"/reunioes/{RID}/plano").json()
     assert p["status"] == "rascunho" and p["acoes"][0]["id"] == "a1"
