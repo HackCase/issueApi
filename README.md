@@ -24,8 +24,10 @@ Reunião ──► Ata ──► Grill ──► Plano de ação ──► Aprov
 ```
 
 1. `POST /reunioes` registra a reunião e gera a ata (resumo, acompanhamento, problemas).
-2. `POST /reunioes/{id}/grill` e `POST /grill/{sessao}/respostas`: a IA faz perguntas sobre cada problema
-   (dono, prazo, critério de aceite) e sugere uma resposta. Máximo de `MAX_TURNOS_GRILL` turnos.
+2. `POST /reunioes/{id}/grill` e `POST /grill/{sessao}/respostas`: o grill acontece em **rodadas**. Cada
+   rodada traz de uma vez as perguntas de todos os problemas (dono, prazo, critério de sucesso), cada uma com
+   uma resposta sugerida; o usuário responde tudo e envia junto. Só se sobrarem lacunas há uma nova rodada,
+   até `MAX_RODADAS_GRILL` (padrão 2). Contrato em [`docs/front-grill-rodadas.md`](docs/front-grill-rodadas.md).
 3. `POST /reunioes/{id}/plano` gera o plano. `PATCH` edita o rascunho e `POST .../plano/aprovar` aprova.
 4. `POST /reunioes/{id}/issues` gera um YAML por ação em `out/issues/<reuniao>/`.
 
@@ -78,7 +80,8 @@ EMBEDDING_DIM=1536                       # deve bater com a coluna vector(1536)
 - Os modelos do Gemini mudam e ficam sobrecarregados com frequência; confira a lista em
   `GET {OPENAI_BASE_URL}/models`. O cliente repete a chamada em 429/5xx (5, 20, 40 e 60 s).
 - O plano gratuito do Gemini limita cerca de 5 requisições por minuto **por modelo**, então um fluxo
-  completo leva alguns minutos. Use modelos diferentes para `FAST` e `STRONG` para dividir a cota.
+  completo faz cerca de 4 chamadas ao LLM (ata, rodada 1 do grill, decisão da rodada 2, plano), por isso
+  cabe na cota. Use modelos diferentes para `FAST` e `STRONG` para dividir a cota.
 - A Anthropic não oferece embeddings: com `LLM_PROVIDER=anthropic`, defina `EMBEDDING_PROVIDER=openai`
   (ou outro compatível), senão a memória vetorial fica desligada e o resto continua funcionando.
 
@@ -117,7 +120,7 @@ Os testes usam um cliente de LLM falso (`FakeLLM`), então não gastam cota nem 
 | `labels.yaml` | labels permitidas; precisam bater com as que existem no GitHub |
 | `precos.yaml` | preço por 1M de tokens, para calcular o custo |
 
-Os prompts ficam em `prompts/*.md`, versionados (`ata.v1`, `grill.v1`, `plano.v1`).
+Os prompts ficam em `prompts/*.md`, versionados (`ata.v1`, `grill.v2`, `plano.v1`).
 
 ## Estrutura
 
