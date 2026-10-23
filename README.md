@@ -2,7 +2,7 @@
 
 **Atas → Plano de ação → Issues.** Transforma uma reunião de gestão da Mega Jr. em tarefas rastreáveis:
 a IA escreve a ata, entrevista o usuário sobre os problemas (estilo *grill-me*), gera um plano de ação
-validado e produz os YAMLs das issues do GitHub. Uma API (FastAPI) também coleta issues/PRs da organização
+validado e produz os YAMLs das issues do GitHub. Uma API (FastAPI) também coleta issues da organização
 para um dashboard.
 
 Projeto da Batalha de Inovação Conecta v360, Trilha B (Tecnologia & TI).

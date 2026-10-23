@@ -9,7 +9,7 @@ from starlette.exceptions import HTTPException
 
 from .erros import ErroApi
 from .guardrails.validators import PlanoInvalido
-from .metricas import db, pulls
+from .metricas import db
 from .metricas import issues as metricas_issues
 from .pipeline.ata import AtaInvalida, EntradaInsuficiente
 from .pipeline.comum import SaidaInvalida
@@ -36,7 +36,6 @@ app.include_router(grill.router)
 app.include_router(plano.router)
 app.include_router(issues.router)
 app.include_router(metricas_issues.router, prefix="/issues", tags=["métricas"])
-app.include_router(pulls.router, prefix="/pulls", tags=["métricas"])
 
 
 def _erro(status: int, erro: str, detalhe) -> JSONResponse:
