@@ -2,6 +2,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 RAIZ = Path(__file__).resolve().parents[2]
@@ -10,9 +11,14 @@ RAIZ = Path(__file__).resolve().parents[2]
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
+    @field_validator("*", mode="before")
+    @classmethod
+    def _comentario_vira_vazio(cls, v):
+        return "" if isinstance(v, str) and v.lstrip().startswith("#") else v
+
     llm_provider: Literal["anthropic", "openai", "gemini"] = "anthropic"
     llm_api_key: str = ""
-    openai_base_url: str = "https://api.openai.com/v1"  # qualquer API compatível (Gemini, Groq, Ollama)
+    openai_base_url: str = "https://api.openai.com/v1"  # API compatível: Gemini, Groq, Ollama
     llm_model_fast: str = ""
     llm_model_strong: str = ""
     embedding_model: str = ""
@@ -26,7 +32,7 @@ class Settings(BaseSettings):
     github_token: str = ""
     cors_origins: str = "http://localhost:5173"  # separadas por vírgula
     max_acoes: int = 12
-    max_turnos_grill: int = 5
+    max_rodadas_grill: int = 2
     dedup_threshold: float = 0.85
     auto_approve: bool = False
     dry_run: bool = True

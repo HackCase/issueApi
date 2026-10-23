@@ -13,9 +13,15 @@ from ..store import ReuniaoRegistro, obter, salvar
 router = APIRouter()
 
 
-class RespostaGrill(BaseModel):
+class RespostaPergunta(BaseModel):
+    id: str
     resposta: str | None = None
     aceitar_recomendacao: bool = False
+
+
+class RespostaGrill(BaseModel):
+    respostas: list[RespostaPergunta] = []
+    aceitar_recomendacoes: bool = False  # as perguntas sem resposta usam a recomendação da IA
 
 
 def _reuniao(store, reuniao_id: str) -> ReuniaoRegistro:
@@ -36,7 +42,12 @@ def iniciar_grill(
     if reg.sessao_id:  # idempotente: uma sessão por reunião
         return obter(store, "grill", reg.sessao_id, GrillSessao)
     sessao = grill.iniciar(
-        reg.reuniao, uuid4().hex, s.max_turnos_grill, llm, novo_sanitizador(s), carregar_contexto(s)
+        reg.reuniao,
+        uuid4().hex,
+        s.max_rodadas_grill,
+        llm,
+        novo_sanitizador(s),
+        carregar_contexto(s),
     )
     salvar(store, "grill", sessao.sessao_id, sessao)
     salvar(store, "reuniao", reuniao_id, reg.model_copy(update={"sessao_id": sessao.sessao_id}))
@@ -58,8 +69,9 @@ def responder_grill(
     nova = grill.responder(
         sessao,
         reg.reuniao,
-        corpo.resposta,
-        corpo.aceitar_recomendacao,
+        {r.id: r.resposta for r in corpo.respostas if r.resposta},
+        {r.id for r in corpo.respostas if r.aceitar_recomendacao},
+        corpo.aceitar_recomendacoes,
         llm,
         novo_sanitizador(s),
         carregar_contexto(s),

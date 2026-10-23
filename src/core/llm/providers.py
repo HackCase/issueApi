@@ -1,4 +1,5 @@
 import json
+import logging
 import re
 import time
 
@@ -6,6 +7,8 @@ import httpx
 
 from ..settings import Settings, get_settings
 from .base import Resposta, T
+
+logger = logging.getLogger(__name__)
 
 _JSON_INSTR = (
     "Responda APENAS com um objeto JSON válido que siga este JSON Schema, "
@@ -30,6 +33,7 @@ class _Base:
             r = self.http.post(url, **kw)
             if r.status_code not in (429, 500, 502, 503, 529) or espera is None:
                 return r
+            logger.warning("LLM respondeu %s; nova tentativa em %ss", r.status_code, espera)
             time.sleep(espera)
 
     def _modelo(self, forte: bool) -> str:

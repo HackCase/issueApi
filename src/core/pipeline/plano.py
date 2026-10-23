@@ -69,7 +69,7 @@ def gerar_plano(
             delimitar("reuniao", texto_reuniao(san.mascarar_reuniao(reuniao))),
             delimitar("ata", san.mascarar(ata_md)),
             delimitar(
-                "grill", san.mascarar(historico(grill.turnos) if grill else "") or "(sem grill)"
+                "grill", san.mascarar(historico(grill.rodadas) if grill else "") or "(sem grill)"
             ),
             *([delimitar("historico", san.mascarar(historico_mem))] if historico_mem else []),
         ]
