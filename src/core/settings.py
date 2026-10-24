@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     atas_repo: str = ""
     atas_branch: str = "main"
     github_token: str = ""
+    github_repo: str = ""  # owner/repo onde as issues são criadas
     cors_origins: str = "http://localhost:5173"  # separadas por vírgula
     max_acoes: int = 12
     max_rodadas_grill: int = 2

@@ -1,5 +1,7 @@
 import logging
 
+import httpx
+import yaml
 from fastapi import APIRouter, Depends
 
 from ..deps import get_config, get_memoria, get_store, novo_sanitizador
@@ -30,6 +32,8 @@ def gerar(
 
     pasta = s.out_dir / "issues" / reuniao_id  # sempre dentro de out/, inclusive com DRY_RUN
     pasta.mkdir(parents=True, exist_ok=True)
+    for velho in [*pasta.glob("*.yml"), *pasta.glob("*.criada")]:  # só as issues desta geração
+        velho.unlink()
     for acao_id, texto in yamls.items():
         (pasta / f"{acao_id}.yml").write_text(texto, encoding="utf-8")
 
@@ -44,3 +48,37 @@ def gerar(
     return [
         {"acao_id": a, "path": caminho_yaml(reuniao_id, a), "conteudo": t} for a, t in yamls.items()
     ]
+
+
+@router.post("/reunioes/{reuniao_id}/issues/publicar")
+def publicar(reuniao_id: str, s: Settings = Depends(get_settings)):
+    """Cria no GitHub as issues dos YAMLs gerados. Idempotente por issue (marca .criada)."""
+    pasta = s.out_dir / "issues" / reuniao_id
+    arquivos = sorted(pasta.glob("*.yml"))
+    if not arquivos:
+        raise ErroApi(404, "issues_nao_geradas", reuniao_id)
+    if not (s.github_token and s.github_repo):
+        raise ErroApi(400, "github_nao_configurado", "defina GITHUB_TOKEN e GITHUB_REPO")
+    headers = {
+        "Authorization": f"Bearer {s.github_token}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    criadas = []
+    for f in arquivos:
+        marca = f.with_suffix(".criada")  # url da issue já criada: reenvio/retry não duplica
+        if marca.exists():
+            url, titulo = marca.read_text(encoding="utf-8").split("\n", 1)
+            criadas.append({"acao_id": f.stem, "titulo": titulo, "url": url})
+            continue
+        y = yaml.safe_load(f.read_text(encoding="utf-8"))
+        payload = {k: y.get(k) or d for k, d in (("title", ""), ("body", ""), ("labels", []), ("assignees", []))}
+        r = httpx.post(
+            f"https://api.github.com/repos/{s.github_repo}/issues", json=payload, headers=headers, timeout=30
+        )
+        if r.status_code >= 400:
+            raise ErroApi(502, "github_falhou", f"{f.stem}: {r.status_code} {r.text[:300]}")
+        url = r.json()["html_url"]
+        marca.write_text(f"{url}\n{payload['title']}", encoding="utf-8")
+        criadas.append({"acao_id": f.stem, "titulo": payload["title"], "url": url})
+    return criadas
